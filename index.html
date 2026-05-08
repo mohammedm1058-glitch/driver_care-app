@@ -733,6 +733,60 @@ function exportCSV() {
   const a = document.createElement('a'); a.href = url; a.download = 'driver_requests.csv'; a.click();
 }
 
+  function exportPDF() {
+  const now = new Date();
+  const month = now.toLocaleString('default', { month: 'long', year: 'numeric' });
+  const total = allRequests.length;
+  const pending = allRequests.filter(r => r.status === 'Pending').length;
+  const approved = allRequests.filter(r => r.status === 'Approved').length;
+  const rejected = allRequests.filter(r => r.status === 'Rejected').length;
+  const typeCounts = {};
+  REQUEST_TYPES.forEach(rt => {
+    typeCounts[rt.label] = allRequests.filter(r => r.request_type === rt.id).length;
+  });
+  const typeRows = Object.entries(typeCounts)
+    .map(([k,v]) => `<tr><td>${k}</td><td>${v}</td><td>${total ? Math.round(v/total*100) : 0}%</td></tr>`).join('');
+  const recentRows = allRequests.slice(0,10)
+    .map(r => {
+      const rt = REQUEST_TYPES.find(t => t.id === r.request_type);
+      return `<tr><td>${r.meter_id}</td><td>${r.name}</td><td>${rt?.label||r.request_type}</td><td>${r.status}</td><td>${r.submitted_at}</td></tr>`;
+    }).join('');
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Report</title>
+  <style>
+    body{font-family:Arial,sans-serif;padding:40px;color:#333}
+    h1{color:#f59e0b}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:20px 0}
+    .stat{background:#f8f9fa;border-radius:8px;padding:16px;text-align:center;border-left:4px solid #f59e0b}
+    .stat-num{font-size:28px;font-weight:bold;color:#f59e0b}
+    .stat-lbl{font-size:12px;color:#666;margin-top:4px}
+    h3{border-bottom:2px solid #f59e0b;padding-bottom:6px;margin-top:30px}
+    table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px}
+    th{background:#f59e0b;color:white;padding:10px;text-align:left}
+    td{padding:8px 10px;border-bottom:1px solid #eee}
+    tr:nth-child(even){background:#f9f9f9}
+    .footer{margin-top:40px;font-size:12px;color:#999;text-align:center}
+  </style></head><body>
+  <h1>🚖 Driver Request Portal</h1>
+  <p style="color:#666">Monthly Report — ${month}</p>
+  <h3>📊 Summary</h3>
+  <div class="stats">
+    <div class="stat"><div class="stat-num">${total}</div><div class="stat-lbl">Total</div></div>
+    <div class="stat"><div class="stat-num" style="color:#10b981">${approved}</div><div class="stat-lbl">Approved</div></div>
+    <div class="stat"><div class="stat-num" style="color:#ef4444">${rejected}</div><div class="stat-lbl">Rejected</div></div>
+    <div class="stat"><div class="stat-num" style="color:#f59e0b">${pending}</div><div class="stat-lbl">Pending</div></div>
+  </div>
+  <h3>📋 Request Types</h3>
+  <table><tr><th>Type</th><th>Count</th><th>%</th></tr>${typeRows}</table>
+  <h3>🕐 Recent Requests</h3>
+  <table><tr><th>Meter ID</th><th>Name</th><th>Request</th><th>Status</th><th>Date</th></tr>${recentRows}</table>
+  <div class="footer">Generated: ${now.toLocaleString()} — ITC Fleet Management</div>
+  </body></html>`;
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  setTimeout(() => win.print(), 500);
+}
+
 // ===== INIT =====
 renderDriverForm();
 </script>
