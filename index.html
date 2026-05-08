@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>ITC Driver Request Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg: #080d1a;
+    --surface: #0f172a;
+    --surface2: #1e293b;
+    --border: #263348;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --amber: #f59e0b;
+    --green: #10b981;
+    --red: #ef4444;
+    --blue: #3b82f6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+  h1,h2,h3 { font-family: 'Syne', sans-serif; }
+
+  .app { max-width: 480px; margin: 0 auto; padding-bottom: 60px; }
+
+  /* Header */
+  .header { background: linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%); padding: 20px 16px 16px; border-bottom: 1px solid var(--border); }
+  .header-top { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .logo { width: 44px; height: 44px; background: var(--amber); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .header-title { font-size: 17px; font-weight: 800; color: #f1f5f9; }
+  .header-sub { font-size: 12px; color: var(--muted); }
+
+  /* Tabs */
+  .tabs { display: flex; background: var(--surface); border-radius: 10px; padding: 3px; }
+  .tab { flex: 1; padding: 9px 4px; border-radius: 8px; border: none; background: transparent; color: var(--muted); font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+  .tab.active { background: var(--amber); color: #0f172a; }
+
+  .content { padding: 20px 16px; }
+
+  /* Progress */
+  .progress { display: flex; gap: 6px; margin-bottom: 20px; }
+  .progress-bar { flex: 1; height: 4px; border-radius: 2px; background: var(--surface2); transition: background 0.3s; }
+  .progress-bar.done { background: var(--amber); }
+  .step-label { font-size: 11px; color: var(--muted); margin-bottom: 18px; letter-spacing: 1px; text-transform: uppercase; }
+
+  /* Form */
+  .field { margin-bottom: 14px; }
+  label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 5px; }
+  input, textarea, select {
+    width: 100%; padding: 11px 14px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: var(--surface);
+    color: var(--text); font-size: 14px; outline: none; font-family: inherit;
+    transition: border-color 0.2s;
+  }
+  input:focus, textarea:focus { border-color: var(--amber); }
+  input.err, textarea.err { border-color: var(--red); }
+  .err-msg { color: var(--red); font-size: 11px; margin-top: 3px; }
+  textarea { resize: none; height: 80px; }
+
+  /* Buttons */
+  .btn { width: 100%; padding: 13px; border-radius: 10px; border: none; font-weight: 800; font-size: 15px; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+  .btn-primary { background: var(--amber); color: #0f172a; }
+  .btn-primary:hover { background: #fbbf24; }
+  .btn-secondary { background: var(--surface2); color: var(--muted); border: 1.5px solid var(--border); }
+  .btn-success { background: var(--green); color: #fff; }
+  .btn-row { display: flex; gap: 10px; margin-top: 8px; }
+  .btn-row .btn { font-size: 14px; padding: 12px; }
+
+  /* Request type grid */
+  .type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .type-card { background: var(--surface2); border: 2px solid var(--border); border-radius: 12px; padding: 14px 8px; cursor: pointer; text-align: center; transition: all 0.2s; }
+  .type-card.selected { background: #f59e0b18; border-color: var(--amber); }
+  .type-card .icon { font-size: 26px; margin-bottom: 5px; }
+  .type-card .lbl { font-size: 12px; font-weight: 700; color: var(--muted); }
+  .type-card.selected .lbl { color: var(--amber); }
+
+  /* Option buttons */
+  .opt-list { display: flex; flex-direction: column; gap: 8px; }
+  .opt-btn { background: var(--surface2); border: 2px solid var(--border); border-radius: 10px; padding: 11px 14px; cursor: pointer; text-align: left; font-size: 13px; font-weight: 600; color: var(--muted); font-family: inherit; transition: all 0.2s; }
+  .opt-btn.selected { background: #f59e0b18; border-color: var(--amber); color: var(--amber); }
+  .opt-btn.selected-red { background: #ef444418; border-color: var(--red); color: var(--red); }
+  .opt-btn.selected-blue { background: #3b82f618; border-color: var(--blue); color: var(--blue); }
+
+  /* Shift row */
+  .shift-row { display: flex; gap: 10px; }
+  .shift-btn { flex: 1; background: var(--surface2); border: 2px solid var(--border); border-radius: 10px; padding: 12px; cursor: pointer; text-align: center; font-size: 13px; font-weight: 700; color: var(--muted); font-family: inherit; transition: all 0.2s; }
+  .shift-btn.selected { background: #f59e0b18; border-color: var(--amber); color: var(--amber); }
+
+  /* Success */
+  .success-screen { text-align: center; padding: 40px 20px; }
+  .success-icon { font-size: 60px; margin-bottom: 16px; }
+  .success-title { font-size: 22px; font-weight: 800; color: var(--green); margin-bottom: 8px; }
+  .success-sub { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+
+  /* Status check */
+  .status-card { background: var(--surface2); border-radius: 14px; padding: 16px; border: 1.5px solid var(--border); margin-top: 16px; }
+  .status-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .status-name { font-weight: 800; font-size: 16px; }
+  .badge { padding: 3px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+  .badge-pending { background: #f59e0b22; color: var(--amber); border: 1px solid #f59e0b44; }
+  .badge-progress { background: #3b82f622; color: var(--blue); border: 1px solid #3b82f644; }
+  .badge-approved { background: #10b98122; color: var(--green); border: 1px solid #10b98144; }
+  .badge-rejected { background: #ef444422; color: var(--red); border: 1px solid #ef444444; }
+  .status-detail { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .status-reason { font-size: 13px; color: var(--red); margin-top: 8px; background: #ef444411; border-radius: 8px; padding: 8px 12px; }
+
+  /* Admin */
+  .admin-login { max-width: 340px; margin: 0 auto; padding-top: 20px; }
+  .admin-login h2 { font-size: 20px; margin-bottom: 4px; }
+  .admin-login p { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 18px; }
+  .stat { background: var(--surface2); border-radius: 12px; padding: 10px 6px; text-align: center; }
+  .stat-num { font-size: 20px; font-weight: 800; }
+  .stat-lbl { font-size: 9px; color: var(--muted); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
+
+  .filter-chips { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 14px; padding-bottom: 4px; }
+  .filter-chips::-webkit-scrollbar { display: none; }
+  .chip { background: var(--surface2); border: none; border-radius: 20px; padding: 5px 12px; font-size: 11px; font-weight: 700; color: var(--muted); cursor: pointer; white-space: nowrap; font-family: inherit; }
+  .chip.active { background: var(--amber); color: #0f172a; }
+
+  .search-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .search-row input { flex: 1; }
+  .export-btn { background: var(--surface2); border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 14px; color: var(--muted); font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; font-family: inherit; }
+
+  .req-card { background: var(--surface2); border-radius: 12px; padding: 14px; border: 1.5px solid var(--border); margin-bottom: 10px; cursor: pointer; transition: border-color 0.2s; }
+  .req-card.open { border-color: var(--amber); }
+  .req-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+  .req-name { font-weight: 800; font-size: 14px; }
+  .req-meta { display: flex; gap: 10px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+  .req-detail { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px; font-size: 13px; color: var(--muted); line-height: 1.7; }
+  .action-row { display: flex; gap: 8px; margin-top: 12px; }
+  .action-btn { flex: 1; padding: 9px; border-radius: 8px; border: none; font-weight: 700; font-size: 12px; cursor: pointer; font-family: inherit; }
+  .btn-approve { background: #10b98122; color: var(--green); border: 1.5px solid #10b98144; }
+  .btn-approve.done { background: var(--green); color: #fff; }
+  .btn-reject { background: #ef444422; color: var(--red); border: 1.5px solid #ef444444; }
+  .btn-reject.done { background: var(--red); color: #fff; }
+  .btn-progress { background: #3b82f622; color: var(--blue); border: 1.5px solid #3b82f644; }
+  .btn-progress.done { background: var(--blue); color: #fff; }
+
+  .reject-box { margin-top: 10px; }
+  .reject-box textarea { border-color: var(--red); }
+
+  .empty { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 14px; }
+  .loading { text-align: center; color: var(--muted); padding: 30px; font-size: 14px; }
+
+  .file-input { padding: 8px 14px; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-in { animation: fadeIn 0.3s ease; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-top">
+      <div class="logo">🚖</div>
+      <div>
+        <div class="header-title">Driver Request Portal</div>
+        <div class="header-sub">ITC Fleet Management</div>
+      </div>
+    </div>
+    <div class="tabs" id="mainTabs">
+      <button class="tab active" onclick="switchTab('driver')">🙋 Submit</button>
+      <button class="tab" onclick="switchTab('status')">📋 My Status</button>
+      <button class="tab" onclick="switchTab('admin')">🛠 Admin</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ===== DRIVER FORM ===== -->
+    <div id="tab-driver" class="fade-in">
+      <div id="driverForm"></div>
+    </div>
+
+    <!-- ===== STATUS CHECK ===== -->
+    <div id="tab-status" style="display:none" class="fade-in">
+      <h2 style="font-size:18px;margin-bottom:4px">Check Request Status</h2>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:20px">Enter your Meter ID to see all your requests</p>
+      <div class="field">
+        <label>Meter ID</label>
+        <input type="text" id="statusMeterId" placeholder="Enter your Meter ID"/>
+      </div>
+      <button class="btn btn-primary" onclick="checkStatus()">Check Status</button>
+      <div id="statusResults"></div>
+    </div>
+
+    <!-- ===== ADMIN ===== -->
+    <div id="tab-admin" style="display:none" class="fade-in">
+      <div id="adminContent"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ===== SUPABASE =====
+const SUPABASE_URL = 'https://yzuhdbbovodbcvqypltv.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_MAZT62JOvn2juu5UIPLNwg_E3cOF1nX';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ===== ADMIN PASSWORD =====
+const ADMIN_PASSWORD = 'ITC2024admin';
+
+// ===== STATE =====
+let currentTab = 'driver';
+let driverStep = 1;
+let driverInfo = {};
+let requestType = '';
+let requestDetails = {};
+let proofFile = null;
+let adminLoggedIn = false;
+let allRequests = [];
+let adminFilter = 'All';
+let adminSearch = '';
+let openCardId = null;
+let rejectingId = null;
+
+const REQUEST_TYPES = [
+  { id: 'zone', label: 'Zone Change', icon: '🗺️' },
+  { id: 'car', label: 'Car Change', icon: '🚖' },
+  { id: 'partner', label: 'Partner Change', icon: '🤝' },
+  { id: 'shift', label: 'Shift Change', icon: '🔄' },
+  { id: 'emergency', label: 'Emergency Leave', icon: '🚨' },
+  { id: 'local', label: 'Local Leave', icon: '🏠' },
+];
+
+const PARTNER_REASONS = [
+  'Not handing over on time',
+  'Not maintaining cleanliness',
+  'Forcing me to wash the car alone',
+  'Other reason'
+];
+const EMERGENCY_REASONS = ['Medical', 'Death in family', 'Emergency'];
+const LOCAL_REASONS = ['Death in family', 'Personal emergency', 'Other'];
+
+// ===== TAB SWITCH =====
+function switchTab(tab) {
+  currentTab = tab;
+  ['driver','status','admin'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = t === tab ? 'block' : 'none';
+  });
+  document.querySelectorAll('.tab').forEach((el,i) => {
+    el.classList.toggle('active', ['driver','status','admin'][i] === tab);
+  });
+  if (tab === 'admin') renderAdmin();
+  if (tab === 'driver') renderDriverForm();
+}
+
+// ===== DRIVER FORM =====
+function renderDriverForm() {
+  const el = document.getElementById('driverForm');
+  if (driverStep === 'done') {
+    el.innerHTML = `
+      <div class="success-screen fade-in">
+        <div class="success-icon">✅</div>
+        <div class="success-title">Request Submitted!</div>
+        <div class="success-sub">Your request has been received.<br>Check "My Status" tab to track progress.</div>
+        <button class="btn btn-primary" onclick="resetForm()">New Request</button>
+      </div>`;
+    return;
+  }
+
+  const bars = [1,2,3].map(s => `<div class="progress-bar ${driverStep >= s ? 'done' : ''}"></div>`).join('');
+  const stepLabels = ['Driver Info', 'Request Type', 'Details'];
+
+  let body = '';
+
+  if (driverStep === 1) {
+    body = `
+      <div class="field"><label>Meter ID *</label>
+        <input id="f_meterId" value="${driverInfo.meterId||''}" placeholder="Enter Meter ID" class="${driverInfo._err?.meterId?'err':''}"/>
+        ${driverInfo._err?.meterId?'<div class="err-msg">Required</div>':''}
+      </div>
+      <div class="field"><label>Taxi Number *</label>
+        <input id="f_taxiNo" value="${driverInfo.taxiNo||''}" placeholder="Enter Taxi Number" class="${driverInfo._err?.taxiNo?'err':''}"/>
+        ${driverInfo._err?.taxiNo?'<div class="err-msg">Required</div>':''}
+      </div>
+      <div class="field"><label>Full Name *</label>
+        <input id="f_name" value="${driverInfo.name||''}" placeholder="Enter Full Name" class="${driverInfo._err?.name?'err':''}"/>
+        ${driverInfo._err?.name?'<div class="err-msg">Required</div>':''}
+      </div>
+      <div class="field"><label>Nationality *</label>
+        <input id="f_nationality" value="${driverInfo.nationality||''}" placeholder="Enter Nationality" class="${driverInfo._err?.nationality?'err':''}"/>
+        ${driverInfo._err?.nationality?'<div class="err-msg">Required</div>':''}
+      </div>
+      <button class="btn btn-primary" style="margin-top:8px" onclick="step1Next()">Next →</button>`;
+  }
+
+  if (driverStep === 2) {
+    const cards = REQUEST_TYPES.map(rt => `
+      <div class="type-card ${requestType===rt.id?'selected':''}" onclick="selectType('${rt.id}')">
+        <div class="icon">${rt.icon}</div>
+        <div class="lbl">${rt.label}</div>
+      </div>`).join('');
+    body = `
+      <p style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px">Select Request Type</p>
+      <div class="type-grid">${cards}</div>
+      ${!requestType&&window._typeErr?'<div class="err-msg" style="margin-bottom:10px">Please select a request type</div>':''}
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="goStep(1)">← Back</button>
+        <button class="btn btn-primary" style="flex:2" onclick="step2Next()">Next →</button>
+      </div>`;
+  }
+
+  if (driverStep === 3) {
+    const rt = REQUEST_TYPES.find(r => r.id === requestType);
+    let detailBody = '';
+
+    if (requestType === 'zone') {
+      detailBody = `
+        <div class="field"><label>Requested Zone *</label>
+          <div class="shift-row">
+            <button class="shift-btn ${requestDetails.requestedZone==='Zone A'?'selected':''}" onclick="setDetail('requestedZone','Zone A')">Zone A</button>
+            <button class="shift-btn ${requestDetails.requestedZone==='Zone B'?'selected':''}" onclick="setDetail('requestedZone','Zone B')">Zone B</button>
+          </div>
+          ${window._detailErr?.requestedZone?'<div class="err-msg">Required</div>':''}
+        </div>`;
+    }
+
+    if (requestType === 'car') {
+      detailBody = `<div style="background:var(--surface2);border-radius:12px;padding:16px;color:var(--muted);font-size:14px;text-align:center">
+        🚖 Car change request will be submitted.<br>Our team will check the database and assign a new car.
+      </div>`;
+    }
+
+    if (requestType === 'partner') {
+      const opts = PARTNER_REASONS.map(r => `
+        <button class="opt-btn ${requestDetails.partnerReason===r?'selected':''}" onclick="setDetail('partnerReason','${r}')">${r}</button>`).join('');
+      detailBody = `
+        <div class="field"><label>Reason *</label>
+          <div class="opt-list">${opts}</div>
+          ${window._detailErr?.partnerReason?'<div class="err-msg">Required</div>':''}
+        </div>
+        ${requestDetails.partnerReason==='Other reason'?`
+        <div class="field"><label>Specify Reason *</label>
+          <textarea id="f_partnerOther" placeholder="Describe the issue...">${requestDetails.partnerOther||''}</textarea>
+          ${window._detailErr?.partnerOther?'<div class="err-msg">Required</div>':''}
+        </div>`:''}`;
+    }
+
+    if (requestType === 'shift') {
+      detailBody = `
+        <div class="field"><label>Current Shift *</label>
+          <div class="shift-row">
+            <button class="shift-btn ${requestDetails.currentShift==='Morning Shift'?'selected':''}" onclick="setDetail('currentShift','Morning Shift')">🌅 Morning</button>
+            <button class="shift-btn ${requestDetails.currentShift==='Night Shift'?'selected':''}" onclick="setDetail('currentShift','Night Shift')">🌙 Night</button>
+          </div>
+          ${window._detailErr?.currentShift?'<div class="err-msg">Required</div>':''}
+        </div>`;
+    }
+
+    if (requestType === 'emergency') {
+      const opts = EMERGENCY_REASONS.map(r => `
+        <button class="opt-btn ${requestDetails.emergencyReason===r?'selected-red':''}" onclick="setDetail('emergencyReason','${r}')">${r}</button>`).join('');
+      detailBody = `
+        <div class="field"><label>Leave From Date *</label>
+          <input type="date" id="f_leaveDate" value="${requestDetails.leaveDate||''}" onchange="setDetail('leaveDate',this.value)" class="${window._detailErr?.leaveDate?'err':''}"/>
+          ${window._detailErr?.leaveDate?'<div class="err-msg">Required</div>':''}
+        </div>
+        <div class="field"><label>Reason *</label>
+          <div class="opt-list">${opts}</div>
+          ${window._detailErr?.emergencyReason?'<div class="err-msg">Required</div>':''}
+        </div>
+        <div class="field"><label>Upload Proof</label>
+          <input type="file" class="file-input" accept="image/*,application/pdf" onchange="handleFile(this)"/>
+          ${proofFile?`<div style="color:var(--green);font-size:12px;margin-top:4px">✅ ${proofFile.name}</div>`:''}
+        </div>`;
+    }
+
+    if (requestType === 'local') {
+      const opts = LOCAL_REASONS.map(r => `
+        <button class="opt-btn ${requestDetails.localReason===r?'selected-blue':''}" onclick="setDetail('localReason','${r}')">${r}</button>`).join('');
+      detailBody = `
+        <div class="field"><label>Reason *</label>
+          <div class="opt-list">${opts}</div>
+          ${window._detailErr?.localReason?'<div class="err-msg">Required</div>':''}
+        </div>
+        ${requestDetails.localReason==='Death in family'?`
+        <div class="field"><label>Who passed away? *</label>
+          <input id="f_deceased" value="${requestDetails.deceasedName||''}" placeholder="e.g. Father, Mother, Relative..." onchange="setDetail('deceasedName',this.value)" class="${window._detailErr?.deceasedName?'err':''}"/>
+          ${window._detailErr?.deceasedName?'<div class="err-msg">Required</div>':''}
+        </div>`:''}
+        ${requestDetails.localReason==='Other'?`
+        <div class="field"><label>Specify Reason</label>
+          <textarea id="f_localOther" placeholder="Describe your reason...">${requestDetails.localOther||''}</textarea>
+        </div>`:''}`;
+    }
+
+    body = `
+      <p style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:16px">${rt?.icon} ${rt?.label}</p>
+      ${detailBody}
+      <div class="btn-row" style="margin-top:16px">
+        <button class="btn btn-secondary" onclick="goStep(2)">← Back</button>
+        <button class="btn btn-success" style="flex:2" onclick="submitRequest()" id="submitBtn">Submit ✓</button>
+      </div>`;
+  }
+
+  el.innerHTML = `
+    <div class="fade-in">
+      <div class="progress">${bars}</div>
+      <div class="step-label">Step ${driverStep} of 3 — ${stepLabels[driverStep-1]}</div>
+      ${body}
+    </div>`;
+}
+
+function selectType(id) { requestType = id; window._typeErr = false; renderDriverForm(); }
+function setDetail(key, val) { requestDetails[key] = val; window._detailErr = {}; renderDriverForm(); }
+function handleFile(input) { proofFile = input.files[0]; }
+
+function step1Next() {
+  const errs = {};
+  ['meterId','taxiNo','name','nationality'].forEach(k => {
+    const val = document.getElementById('f_'+k)?.value?.trim();
+    if (!val) errs[k] = true;
+    else driverInfo[k] = val;
+  });
+  if (Object.keys(errs).length) { driverInfo._err = errs; renderDriverForm(); return; }
+  driverInfo._err = {};
+  goStep(2);
+}
+
+function step2Next() {
+  if (!requestType) { window._typeErr = true; renderDriverForm(); return; }
+  window._typeErr = false;
+  goStep(3);
+}
+
+function goStep(n) { driverStep = n; renderDriverForm(); }
+
+function validateDetails() {
+  const e = {};
+  if (requestType === 'zone' && !requestDetails.requestedZone) e.requestedZone = true;
+  if (requestType === 'partner') {
+    if (!requestDetails.partnerReason) e.partnerReason = true;
+    if (requestDetails.partnerReason === 'Other reason') {
+      const v = document.getElementById('f_partnerOther')?.value?.trim();
+      if (!v) e.partnerOther = true;
+      else requestDetails.partnerOther = v;
+    }
+  }
+  if (requestType === 'shift' && !requestDetails.currentShift) e.currentShift = true;
+  if (requestType === 'emergency') {
+    if (!requestDetails.leaveDate) e.leaveDate = true;
+    if (!requestDetails.emergencyReason) e.emergencyReason = true;
+  }
+  if (requestType === 'local') {
+    if (!requestDetails.localReason) e.localReason = true;
+    if (requestDetails.localReason === 'Death in family') {
+      const v = document.getElementById('f_deceased')?.value?.trim();
+      if (!v) e.deceasedName = true;
+      else requestDetails.deceasedName = v;
+    }
+    if (requestDetails.localReason === 'Other') {
+      const v = document.getElementById('f_localOther')?.value?.trim();
+      if (v) requestDetails.localOther = v;
+    }
+  }
+  return e;
+}
+
+async function submitRequest() {
+  const errs = validateDetails();
+  if (Object.keys(errs).length) { window._detailErr = errs; renderDriverForm(); return; }
+
+  const btn = document.getElementById('submitBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
+
+  const record = {
+    meter_id: driverInfo.meterId,
+    taxi_no: driverInfo.taxiNo,
+    name: driverInfo.name,
+    nationality: driverInfo.nationality,
+    request_type: requestType,
+    details: JSON.stringify(requestDetails),
+    status: 'Pending',
+    submitted_at: new Date().toLocaleString(),
+  };
+
+  const { error } = await db.from('requests').insert([record]);
+  if (error) {
+    alert('Error: ' + error.message);
+    if (btn) { btn.disabled = false; btn.textContent = 'Submit ✓'; }
+    return;
+  }
+  driverStep = 'done';
+  renderDriverForm();
+}
+
+function resetForm() {
+  driverStep = 1; driverInfo = {}; requestType = '';
+  requestDetails = {}; proofFile = null;
+  window._typeErr = false; window._detailErr = {};
+  renderDriverForm();
+}
+
+// ===== STATUS CHECK =====
+async function checkStatus() {
+  const meterId = document.getElementById('statusMeterId').value.trim();
+  if (!meterId) { alert('Please enter your Meter ID'); return; }
+
+  const el = document.getElementById('statusResults');
+  el.innerHTML = '<div class="loading">Checking...</div>';
+
+  const { data, error } = await db.from('requests').select('*').eq('meter_id', meterId).order('submitted_at', { ascending: false });
+
+  if (error) { el.innerHTML = '<div class="empty">Error fetching data</div>'; return; }
+  if (!data || data.length === 0) { el.innerHTML = '<div class="empty">No requests found for this Meter ID</div>'; return; }
+
+  const cards = data.map(r => {
+    const rt = REQUEST_TYPES.find(t => t.id === r.request_type);
+    const badgeClass = r.status === 'Pending' ? 'badge-pending' : r.status === 'In Progress' ? 'badge-progress' : r.status === 'Approved' ? 'badge-approved' : 'badge-rejected';
+    let details = '';
+    try {
+      const d = JSON.parse(r.details);
+      details = Object.entries(d).map(([k,v]) => `<b>${k}:</b> ${v}`).join(' &nbsp;|&nbsp; ');
+    } catch(e) { details = r.details; }
+
+    return `
+      <div class="status-card fade-in">
+        <div class="status-row">
+          <div class="status-name">${rt?.icon||''} ${rt?.label||r.request_type}</div>
+          <span class="badge ${badgeClass}">${r.status}</span>
+        </div>
+        <div class="status-detail">${details}</div>
+        <div class="status-detail" style="margin-top:4px">📅 ${r.submitted_at}</div>
+        ${r.reject_reason ? `<div class="status-reason">❌ Reason: ${r.reject_reason}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `<div style="margin-top:4px;margin-bottom:12px;font-size:13px;color:var(--muted)">${data.length} request(s) found</div>${cards}`;
+}
+
+// ===== ADMIN =====
+function renderAdmin() {
+  const el = document.getElementById('adminContent');
+  if (!adminLoggedIn) {
+    el.innerHTML = `
+      <div class="admin-login fade-in">
+        <h2>🛠 Admin Login</h2>
+        <p>Enter admin password to continue</p>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="adminPass" placeholder="Enter password" onkeydown="if(event.key==='Enter')adminLogin()"/>
+        </div>
+        <button class="btn btn-primary" onclick="adminLogin()">Login</button>
+        <div id="loginErr" style="color:var(--red);font-size:13px;margin-top:10px;text-align:center"></div>
+      </div>`;
+    return;
+  }
+  loadAdminRequests();
+}
+
+function adminLogin() {
+  const pass = document.getElementById('adminPass')?.value;
+  if (pass === ADMIN_PASSWORD) {
+    adminLoggedIn = true;
+    loadAdminRequests();
+  } else {
+    document.getElementById('loginErr').textContent = '❌ Incorrect password';
+  }
+}
+
+async function loadAdminRequests() {
+  const el = document.getElementById('adminContent');
+  el.innerHTML = '<div class="loading">Loading requests...</div>';
+
+  const { data, error } = await db.from('requests').select('*').order('submitted_at', { ascending: false });
+  if (error) { el.innerHTML = '<div class="empty">Error loading data</div>'; return; }
+  allRequests = data || [];
+  renderAdminPanel();
+}
+
+function renderAdminPanel() {
+  const el = document.getElementById('adminContent');
+
+  const counts = { Pending: 0, 'In Progress': 0, Approved: 0, Rejected: 0 };
+  allRequests.forEach(r => { if (counts[r.status] !== undefined) counts[r.status]++; });
+
+  const filtered = allRequests.filter(r => {
+    const matchFilter = adminFilter === 'All' || r.request_type === adminFilter;
+    const s = adminSearch.toLowerCase();
+    const matchSearch = !s || r.name?.toLowerCase().includes(s) || r.meter_id?.toLowerCase().includes(s) || r.taxi_no?.toLowerCase().includes(s);
+    return matchFilter && matchSearch;
+  });
+
+  const statColors = { Pending: 'var(--amber)', 'In Progress': 'var(--blue)', Approved: 'var(--green)', Rejected: 'var(--red)' };
+
+  const stats = Object.entries(counts).map(([s,c]) => `
+    <div class="stat">
+      <div class="stat-num" style="color:${statColors[s]}">${c}</div>
+      <div class="stat-lbl">${s}</div>
+    </div>`).join('');
+
+  const chips = ['All', ...REQUEST_TYPES.map(r => r.id)].map(f => {
+    const lbl = f === 'All' ? 'All' : REQUEST_TYPES.find(r => r.id === f)?.label || f;
+    const cnt = f === 'All' ? allRequests.length : allRequests.filter(r => r.request_type === f).length;
+    return `<button class="chip ${adminFilter===f?'active':''}" onclick="setFilter('${f}')">${lbl} (${cnt})</button>`;
+  }).join('');
+
+  const cards = filtered.length === 0
+    ? '<div class="empty">No requests found</div>'
+    : filtered.map(r => {
+        const rt = REQUEST_TYPES.find(t => t.id === r.request_type);
+        const badgeClass = r.status === 'Pending' ? 'badge-pending' : r.status === 'In Progress' ? 'badge-progress' : r.status === 'Approved' ? 'badge-approved' : 'badge-rejected';
+        const isOpen = openCardId === r.id;
+
+        let detailText = '';
+        try {
+          const d = JSON.parse(r.details);
+          detailText = Object.entries(d).map(([k,v]) => `<b>${k}:</b> ${v}`).join('<br>');
+        } catch(e) { detailText = r.details; }
+
+        let actionArea = '';
+        if (isOpen) {
+          const isRejecting = rejectingId === r.id;
+          actionArea = `
+            <div class="req-detail">
+              <div style="margin-bottom:8px">${detailText}</div>
+              <div style="color:var(--muted);font-size:12px">🌍 ${r.nationality} &nbsp;|&nbsp; 📅 ${r.submitted_at}</div>
+              ${r.reject_reason ? `<div class="status-reason" style="margin-top:8px">❌ Reason: ${r.reject_reason}</div>` : ''}
+            </div>
+            <div class="action-row">
+              <button class="action-btn btn-progress ${r.status==='In Progress'?'done':''}" onclick="updateStatus(event,'${r.id}','In Progress')">⏳ In Progress</button>
+              <button class="action-btn btn-approve ${r.status==='Approved'?'done':''}" onclick="updateStatus(event,'${r.id}','Approved')">✅ Approve</button>
+              <button class="action-btn btn-reject ${r.status==='Rejected'?'done':''}" onclick="startReject(event,'${r.id}')">❌ Reject</button>
+            </div>
+            ${isRejecting ? `
+            <div class="reject-box">
+              <label style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;display:block">Rejection Reason *</label>
+              <textarea id="rejectReason_${r.id}" placeholder="Enter reason for rejection..."></textarea>
+              <div class="btn-row" style="margin-top:8px">
+                <button class="action-btn btn-reject" style="flex:1;padding:10px" onclick="cancelReject(event)">Cancel</button>
+                <button class="action-btn btn-reject done" style="flex:2;padding:10px" onclick="confirmReject(event,'${r.id}')">Confirm Reject</button>
+              </div>
+            </div>` : ''}`;
+        }
+
+        return `
+          <div class="req-card ${isOpen?'open':''}" onclick="toggleCard('${r.id}')">
+            <div class="req-top">
+              <div class="req-name">${r.name}</div>
+              <span class="badge ${badgeClass}">${r.status}</span>
+            </div>
+            <div class="req-meta">
+              <span>🪪 ${r.meter_id}</span>
+              <span>🚖 ${r.taxi_no}</span>
+              <span>${rt?.icon||''} ${rt?.label||r.request_type}</span>
+            </div>
+            ${actionArea}
+          </div>`;
+      }).join('');
+
+  el.innerHTML = `
+    <div class="fade-in">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h2 style="font-size:18px">Admin Panel</h2>
+        <button class="export-btn" onclick="exportCSV()">⬇ CSV</button>
+      </div>
+      <div class="stats">${stats}</div>
+      <div class="search-row">
+        <input placeholder="Search name, meter ID, taxi..." value="${adminSearch}" oninput="adminSearch=this.value;renderAdminPanel()" style="flex:1"/>
+        <button class="export-btn" onclick="loadAdminRequests()">🔄</button>
+      </div>
+      <div class="filter-chips">${chips}</div>
+      ${cards}
+    </div>`;
+}
+
+function toggleCard(id) {
+  openCardId = openCardId === id ? null : id;
+  rejectingId = null;
+  renderAdminPanel();
+}
+
+function setFilter(f) { adminFilter = f; renderAdminPanel(); }
+
+async function updateStatus(e, id, status) {
+  e.stopPropagation();
+  const { error } = await db.from('requests').update({ status }).eq('id', id);
+  if (error) { alert('Error: ' + error.message); return; }
+  const req = allRequests.find(r => r.id === id);
+  if (req) req.status = status;
+  renderAdminPanel();
+}
+
+function startReject(e, id) {
+  e.stopPropagation();
+  rejectingId = id;
+  renderAdminPanel();
+}
+
+function cancelReject(e) {
+  e.stopPropagation();
+  rejectingId = null;
+  renderAdminPanel();
+}
+
+async function confirmReject(e, id) {
+  e.stopPropagation();
+  const reason = document.getElementById('rejectReason_'+id)?.value?.trim();
+  if (!reason) { alert('Please enter a rejection reason'); return; }
+  const { error } = await db.from('requests').update({ status: 'Rejected', reject_reason: reason }).eq('id', id);
+  if (error) { alert('Error: ' + error.message); return; }
+  const req = allRequests.find(r => r.id === id);
+  if (req) { req.status = 'Rejected'; req.reject_reason = reason; }
+  rejectingId = null;
+  renderAdminPanel();
+}
+
+function exportCSV() {
+  const headers = ['ID','Meter ID','Taxi No','Name','Nationality','Request Type','Details','Status','Reject Reason','Submitted At'];
+  const rows = allRequests.map(r => [
+    r.id, r.meter_id, r.taxi_no, r.name, r.nationality,
+    REQUEST_TYPES.find(t => t.id === r.request_type)?.label || r.request_type,
+    r.details, r.status, r.reject_reason || '', r.submitted_at
+  ]);
+  const csv = [headers, ...rows].map(row => row.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'driver_requests.csv'; a.click();
+}
+
+// ===== INIT =====
+renderDriverForm();
+</script>
+</body>
+</html>
