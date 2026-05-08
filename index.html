@@ -634,7 +634,7 @@ function renderAdminPanel() {
             ${isRejecting ? `
             <div class="reject-box">
               <label style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;display:block">Rejection Reason *</label>
-              <textarea id="rejectReason_${r.id}" placeholder="Enter reason for rejection..."></textarea>
+              <textarea id="rejectReason_${r.id}" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()" oninput="event.stopPropagation()" placeholder="Enter reason for rejection..."></textarea>
               <div class="btn-row" style="margin-top:8px">
                 <button class="action-btn btn-reject" style="flex:1;padding:10px" onclick="cancelReject(event)">Cancel</button>
                 <button class="action-btn btn-reject done" style="flex:2;padding:10px" onclick="confirmReject(event,'${r.id}')">Confirm Reject</button>
