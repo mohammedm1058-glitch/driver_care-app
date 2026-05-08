@@ -674,8 +674,8 @@ function renderAdminPanel() {
 }
 
 function toggleCard(id) {
+  if (rejectingId) return;
   openCardId = openCardId === id ? null : id;
-  rejectingId = null;
   renderAdminPanel();
 }
 
@@ -692,8 +692,14 @@ async function updateStatus(e, id, status) {
 
 function startReject(e, id) {
   e.stopPropagation();
+  e.preventDefault();
   rejectingId = id;
+  openCardId = id;
   renderAdminPanel();
+  setTimeout(() => {
+    const ta = document.getElementById('rejectReason_'+id);
+    if (ta) ta.focus();
+  }, 100);
 }
 
 function cancelReject(e) {
